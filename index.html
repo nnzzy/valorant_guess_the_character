@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ทายตัวละคร Valorant</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Noto+Sans+Thai:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --surface: #11151c;
+    --card: #161c26;
+    --border: rgba(255,70,85,0.2);
+    --red: #ff4655;
+    --red-glow: rgba(255,70,85,0.35);
+    --gold: #c8a96e;
+    --white: #ece8e1;
+    --muted: #5a6070;
+    --page-w: 860px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'Noto Sans Thai', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background-image: repeating-linear-gradient(
+      -45deg, transparent, transparent 60px,
+      rgba(255,70,85,0.013) 60px, rgba(255,70,85,0.013) 61px
+    );
+    pointer-events:none; z-index:0;
+  }
+
+  /* ───── SCREENS ───── */
+  .screen { display:none; position:relative; z-index:1; }
+
+  /* both screens use the same max-width wrapper */
+  #setup-screen.active,
+  #game-screen.active {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    width: 100%;
+  }
+
+  /* inner content wrapper — same width for both screens */
+  .page-inner {
+    width: 100%;
+    max-width: var(--page-w);
+    padding: 0 1rem;
+  }
+
+  /* ───── SETUP SCREEN ───── */
+  #setup-screen.active {
+    padding-top: 2.2rem;
+    padding-bottom: 3rem;
+    gap: 1.5rem;
+  }
+
+  /* LOGO */
+  .logo-wrap { text-align:center; width:100%; }
+  .logo-eyebrow {
+    font-family:'Noto Sans Thai','Rajdhani',sans-serif;
+    font-size:0.7rem; letter-spacing:4px;
+    color:var(--red); text-transform:uppercase; margin-bottom:0.3rem;
+  }
+  .logo-main {
+    font-family:'Noto Sans Thai','Rajdhani',sans-serif;
+    font-size:clamp(2rem,6vw,3.4rem); font-weight:800;
+    color:var(--white); letter-spacing:1px; text-transform:uppercase; line-height:1.1;
+  }
+  .logo-main span { color:var(--red); }
+  .logo-game {
+    font-family:'Rajdhani',sans-serif;
+    font-size:clamp(0.9rem,3vw,1.6rem); font-weight:600;
+    color:var(--red); letter-spacing:6px; text-transform:uppercase;
+  }
+  .logo-sub {
+    font-family:'Noto Sans Thai',sans-serif;
+    font-size:0.78rem; color:var(--muted); letter-spacing:0.5px;
+    margin-top:0.4rem; font-weight:400;
+  }
+
+  /* SETUP CARD */
+  .setup-card {
+    width:100%;
+    background:var(--surface);
+    border:1px solid var(--border);
+    clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));
+    padding:1.5rem;
+  }
+  .card-label {
+    font-family:'Noto Sans Thai','Rajdhani',sans-serif;
+    font-size:0.7rem; letter-spacing:2px;
+    color:var(--red); text-transform:uppercase; margin-bottom:1rem;
+    display:flex; align-items:center; gap:0.6rem;
+  }
+  .card-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* SETUP GRID — 6 col to match board */
+  .agent-grid-setup {
+    display:grid;
+    grid-template-columns:repeat(6,1fr);
+    gap:0.5rem;
+  }
+  @media(max-width:560px){ .agent-grid-setup { grid-template-columns:repeat(4,1fr); } }
+
+  .agent-tile-setup {
+    position:relative; aspect-ratio:3/4;
+    cursor:pointer; overflow:hidden;
+    border:2px solid transparent;
+    background:var(--card);
+    transition:border-color 0.2s, transform 0.15s;
+  }
+  .agent-tile-setup:hover { border-color:rgba(255,70,85,0.5); transform:scale(1.04); }
+  .agent-tile-setup.selected { border-color:var(--red); box-shadow:0 0 16px var(--red-glow); }
+
+  .agent-tile-setup img {
+    width:100%; height:100%;
+    object-fit:cover; object-position:top center;
+    display:block; transition:transform 0.3s;
+  }
+  .agent-tile-setup:hover img { transform:scale(1.06); }
+
+  .ph-box {
+    width:100%; height:100%;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    background:linear-gradient(160deg,#1c2436,#0d1018); gap:0.3rem;
+  }
+  .ph-box .ph-icon { font-size:1.5rem; opacity:0.18; }
+  .ph-box .ph-name {
+    font-family:'Rajdhani',sans-serif;
+    font-size:0.55rem; letter-spacing:1px;
+    color:var(--muted); text-transform:uppercase; text-align:center; padding:0 3px;
+  }
+
+  .agent-tile-setup .agent-label {
+    position:absolute; bottom:0; left:0; right:0;
+    background:linear-gradient(transparent,rgba(0,0,0,0.9));
+    padding:0.4rem 0.15rem 0.2rem;
+    font-family:'Rajdhani',sans-serif;
+    font-size:0.58rem; font-weight:700; letter-spacing:0.8px;
+    text-transform:uppercase; text-align:center; color:var(--white);
+  }
+  .agent-tile-setup .sel-check {
+    position:absolute; top:3px; right:3px;
+    background:var(--red); color:#fff;
+    font-size:0.55rem; width:16px; height:16px;
+    display:none; align-items:center; justify-content:center;
+    clip-path:polygon(0 0,100% 0,100% 80%,80% 100%,0 100%);
+  }
+  .agent-tile-setup.selected .sel-check { display:flex; }
+
+  .btn-random {
+    width:100%; margin-top:0.7rem;
+    background:transparent; border:1px solid var(--border);
+    color:var(--muted); font-family:'Noto Sans Thai',sans-serif;
+    font-size:0.8rem; letter-spacing:1px;
+    padding:0.5rem; cursor:pointer; transition:all 0.2s;
+  }
+  .btn-random:hover { border-color:var(--gold); color:var(--gold); }
+
+  .btn-start {
+    width:100%;
+    background:var(--red); color:#fff; border:none;
+    font-family:'Noto Sans Thai',sans-serif; font-size:1rem; font-weight:700;
+    letter-spacing:2px; padding:0.85rem;
+    cursor:pointer;
+    clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));
+    box-shadow:0 4px 22px var(--red-glow); transition:all 0.2s;
+  }
+  .btn-start:hover { background:#ff6470; box-shadow:0 6px 30px rgba(255,70,85,0.5); }
+
+  /* ───── GAME SCREEN ───── */
+  #game-screen.active {
+    padding: 0;
+    align-items: center;
+  }
+
+  /* topbar full width */
+  .game-topbar {
+    width:100%;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0.5rem 1rem;
+    background:var(--surface); border-bottom:1px solid var(--border);
+    flex-shrink:0;
+  }
+  .topbar-left { display:flex; align-items:center; gap:0.8rem; }
+  .topbar-logo {
+    font-family:'Rajdhani',sans-serif;
+    font-size:0.9rem; font-weight:700;
+    letter-spacing:3px; color:var(--red); text-transform:uppercase;
+  }
+  .btn-topbar {
+    background:transparent; border:1px solid var(--border);
+    color:var(--muted); font-family:'Noto Sans Thai',sans-serif;
+    font-size:0.68rem; letter-spacing:1px;
+    padding:0.28rem 0.7rem; cursor:pointer; transition:all 0.2s;
+  }
+  .btn-topbar:hover { border-color:var(--red); color:var(--red); }
+  .btn-topbar.back:hover { border-color:var(--gold); color:var(--gold); }
+
+  /* BANNER — full width, centered content */
+  .my-agent-banner {
+    width:100%;
+    position:relative;
+    background:#0d1118;
+    border-bottom:2px solid var(--red);
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:flex-end;
+    height:220px; overflow:hidden; flex-shrink:0;
+  }
+  .my-agent-banner::before {
+    content:''; position:absolute; inset:0;
+    background:
+      radial-gradient(ellipse 60% 80% at 50% 110%, rgba(255,70,85,0.2) 0%, transparent 70%),
+      radial-gradient(ellipse 35% 40% at 50% 100%, rgba(255,70,85,0.1) 0%, transparent 60%);
+    pointer-events:none; z-index:0;
+  }
+  .my-agent-banner::after {
+    content:''; position:absolute; inset:0;
+    background-image: repeating-linear-gradient(
+      0deg, transparent, transparent 3px,
+      rgba(255,70,85,0.018) 3px, rgba(255,70,85,0.018) 4px
+    );
+    pointer-events:none; z-index:0;
+  }
+  .banner-glow-ring {
+    position:absolute; bottom:-60px; left:50%; transform:translateX(-50%);
+    width:320px; height:320px; border-radius:50%;
+    background:radial-gradient(circle, rgba(255,70,85,0.16) 0%, transparent 65%);
+    z-index:1; pointer-events:none;
+    animation:pulseRing 3s ease-in-out infinite;
+  }
+  @keyframes pulseRing {
+    0%,100% { transform:translateX(-50%) scale(1); opacity:0.7; }
+    50%      { transform:translateX(-50%) scale(1.12); opacity:1; }
+  }
+  .banner-corner {
+    position:absolute; width:16px; height:16px;
+    border-color:var(--red); border-style:solid; opacity:0.5; z-index:2;
+  }
+  .banner-corner.tl { top:10px; left:10px; border-width:2px 0 0 2px; }
+  .banner-corner.tr { top:10px; right:10px; border-width:2px 2px 0 0; }
+  .banner-corner.bl { bottom:10px; left:10px; border-width:0 0 2px 2px; }
+  .banner-corner.br { bottom:10px; right:10px; border-width:0 2px 2px 0; }
+
+  .banner-img-wrap {
+    position:absolute; bottom:0; left:50%; transform:translateX(-50%);
+    height:100%; display:flex; align-items:flex-end; justify-content:center;
+    z-index:2; pointer-events:none;
+  }
+  .banner-img-wrap img {
+    height:215px; width:auto;
+    object-fit:contain; object-position:bottom;
+    filter:drop-shadow(0 -2px 20px rgba(255,70,85,0.45)) drop-shadow(0 0 6px rgba(255,70,85,0.25));
+    animation:agentFloat 4s ease-in-out infinite;
+  }
+  @keyframes agentFloat {
+    0%,100% { transform:translateY(0); }
+    50%      { transform:translateY(-7px); }
+  }
+  .banner-img-wrap .banner-ph {
+    font-size:4.5rem; opacity:0.15; padding-bottom:0.8rem;
+  }
+  .banner-text-overlay {
+    position:relative; z-index:3; width:100%;
+    display:flex; flex-direction:column; align-items:center;
+    padding-bottom:0.75rem;
+    background:linear-gradient(transparent, rgba(10,12,15,0.88) 55%);
+  }
+  .banner-secret-label {
+    font-size:0.62rem; letter-spacing:2px;
+    color:var(--red); margin-bottom:0.08rem;
+    font-family:'Noto Sans Thai',sans-serif; font-weight:600;
+  }
+  .banner-agent-name {
+    font-family:'Rajdhani',sans-serif;
+    font-size:2.6rem; font-weight:700;
+    letter-spacing:5px; color:var(--white); line-height:1;
+    text-transform:uppercase;
+    text-shadow:0 0 28px rgba(255,70,85,0.5), 0 2px 4px rgba(0,0,0,0.9);
+  }
+  .banner-role {
+    font-family:'Rajdhani',sans-serif;
+    font-size:0.68rem; font-weight:600;
+    letter-spacing:3px; margin-top:0.2rem; text-transform:uppercase;
+  }
+  .btn-hide-banner {
+    position:absolute; top:10px; right:10px; z-index:4;
+    background:rgba(10,12,15,0.65); border:1px solid var(--border);
+    color:var(--muted); font-family:'Noto Sans Thai',sans-serif;
+    font-size:0.6rem; letter-spacing:1px;
+    padding:0.22rem 0.55rem; cursor:pointer; transition:all 0.2s;
+    backdrop-filter:blur(4px);
+  }
+  .btn-hide-banner:hover { border-color:var(--gold); color:var(--gold); }
+
+  .banner-hidden .banner-img-wrap img  { filter:blur(12px) grayscale(1); animation:none; }
+  .banner-hidden .banner-img-wrap .banner-ph { filter:blur(8px); }
+  .banner-hidden .banner-agent-name   { filter:blur(8px); user-select:none; }
+  .banner-hidden .banner-role         { filter:blur(4px); }
+  .banner-hidden .banner-glow-ring    { opacity:0; }
+
+  /* BOARD — constrained width like setup */
+  .board-area {
+    width:100%; max-width:var(--page-w);
+    flex:1; overflow-y:auto; padding:0.9rem 1rem;
+  }
+  .board-section-label {
+    font-family:'Noto Sans Thai','Rajdhani',sans-serif;
+    font-size:0.68rem; letter-spacing:1px; font-weight:600;
+    color:var(--muted); text-transform:uppercase;
+    margin-bottom:0.65rem;
+    display:flex; align-items:center; gap:0.6rem;
+  }
+  .board-section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* BOARD GRID — 6 col */
+  .agent-board-grid {
+    display:grid;
+    grid-template-columns:repeat(6,1fr);
+    gap:0.45rem;
+  }
+  @media(max-width:560px){ .agent-board-grid { grid-template-columns:repeat(4,1fr); } }
+
+  .board-tile {
+    position:relative; aspect-ratio:3/4;
+    cursor:pointer; overflow:hidden;
+    background:var(--card);
+    border:1px solid rgba(255,255,255,0.05);
+    transition:border-color 0.15s, transform 0.15s;
+  }
+  .board-tile:hover:not(.elim) { border-color:rgba(255,70,85,0.4); transform:scale(1.04); }
+  .board-tile img {
+    width:100%; height:100%;
+    object-fit:cover; object-position:top center;
+    display:block; transition:filter 0.25s;
+  }
+  .board-tile .board-ph {
+    width:100%; height:100%;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    background:linear-gradient(160deg,#1c2436,#0d1018); gap:0.25rem;
+    transition:filter 0.25s;
+  }
+  .board-ph .bph-icon { font-size:1.2rem; opacity:0.15; }
+  .board-ph .bph-name {
+    font-family:'Rajdhani',sans-serif;
+    font-size:0.5rem; letter-spacing:1px;
+    color:var(--muted); text-transform:uppercase;
+    text-align:center; padding:0 3px;
+  }
+  .board-tile .tile-name {
+    position:absolute; bottom:0; left:0; right:0;
+    background:linear-gradient(transparent,rgba(0,0,0,0.92));
+    padding:0.4rem 0.1rem 0.18rem;
+    font-family:'Rajdhani',sans-serif;
+    font-size:0.55rem; font-weight:700; letter-spacing:0.8px;
+    text-align:center; text-transform:uppercase; color:var(--white);
+    transition:opacity 0.25s;
+  }
+  .x-overlay { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+  .x-line-1,.x-line-2 {
+    position:absolute; width:82%; height:3px;
+    background:var(--red); border-radius:2px;
+    opacity:0; box-shadow:0 0 10px var(--red-glow);
+    transition:opacity 0.2s, transform 0.25s cubic-bezier(0.175,0.885,0.32,1.275);
+  }
+  .x-line-1 { transform:rotate(45deg) scaleX(0); }
+  .x-line-2 { transform:rotate(-45deg) scaleX(0); }
+  .board-tile.elim img { filter:grayscale(1) brightness(0.28); }
+  .board-tile.elim .board-ph { filter:grayscale(1) brightness(0.28); }
+  .board-tile.elim .tile-name { opacity:0.2; }
+  .board-tile.elim .x-line-1 { opacity:1; transform:rotate(45deg) scaleX(1); }
+  .board-tile.elim .x-line-2 { opacity:1; transform:rotate(-45deg) scaleX(1); }
+
+  /* LOADING shimmer */
+  .img-loading { background:linear-gradient(90deg,#161c26 25%,#1e2838 50%,#161c26 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+</style>
+</head>
+<body>
+
+<!-- ════════ SETUP SCREEN ════════ -->
+<div id="setup-screen" class="screen active">
+  <div class="page-inner" style="display:flex;flex-direction:column;gap:1.5rem;align-items:stretch;">
+
+    <div class="logo-wrap">
+      <div class="logo-eyebrow">● เกมทายตัวละคร ●</div>
+      <div class="logo-main">ทาย<span>ตัวละคร</span></div>
+      <div class="logo-game">VALORANT</div>
+      <div class="logo-sub">เลือก 1 ตัวละคร · ให้เพื่อนทาย</div>
+    </div>
+
+    <div class="setup-card">
+      <div class="card-label">เลือกตัวละครลับของคุณ</div>
+      <div class="agent-grid-setup" id="agent-grid-setup"></div>
+      <button class="btn-random" onclick="pickRandom()">🎲 สุ่มตัวละครให้ฉัน</button>
+    </div>
+
+    <button class="btn-start" onclick="startGame()">เริ่มเกม</button>
+  </div>
+</div>
+
+<!-- ════════ GAME SCREEN ════════ -->
+<div id="game-screen" class="screen">
+
+  <div class="game-topbar">
+    <div class="topbar-left">
+      <span class="topbar-logo">● Valorant Guess</span>
+      <!-- ปุ่มย้อนกลับ fix #4 -->
+      <button class="btn-topbar back" onclick="goBack()">← ย้อนกลับ</button>
+    </div>
+    <button class="btn-topbar" onclick="resetGame()">↩ รีเซต</button>
+  </div>
+
+  <div class="my-agent-banner" id="my-agent-banner">
+    <div class="banner-corner tl"></div>
+    <div class="banner-corner tr"></div>
+    <div class="banner-corner bl"></div>
+    <div class="banner-corner br"></div>
+    <div class="banner-glow-ring"></div>
+    <div class="banner-img-wrap" id="banner-img-wrap"></div>
+    <div class="banner-text-overlay">
+      <div class="banner-agent-name" id="banner-name">???</div>
+      <div class="banner-role" id="banner-role">???</div>
+    </div>
+    <button class="btn-hide-banner" id="hide-btn" onclick="toggleHide()">ซ่อน</button>
+  </div>
+
+  <div class="board-area">
+    <div class="board-section-label">กระดานตัวละครทั้งหมด — กดเพื่อตัดออก</div>
+    <div class="agent-board-grid" id="agent-board-grid"></div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  AGENTS — โหลดจาก valorant-api.com ตอน init
+//  ได้ UUID + URL รูปที่ถูกต้อง 100% เสมอ
+// ═══════════════════════════════════════════════════════
+const ROLE_COLOR = {
+  Duelist:"#ff4655", Controller:"#4ecdc4",
+  Initiator:"#c8a96e", Sentinel:"#9b8ecf"
+};
+
+let AGENTS = [];
+let state = { myAgent:null, eliminated:[], history:[] };
+let bannerHidden = false;
+
+// ── โหลด agent list จาก API ──
+async function loadAgents() {
+  const setupGrid  = document.getElementById('agent-grid-setup');
+  const boardGrid  = document.getElementById('agent-board-grid');
+
+  // แสดง loading
+  setupGrid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--muted);font-size:0.85rem;letter-spacing:2px;">กำลังโหลดตัวละคร...</div>`;
+
+  try {
+    const res  = await fetch('https://valorant-api.com/v1/agents?isPlayableCharacter=true');
+    const data = await res.json();
+
+    AGENTS = data.data
+      .map((a, i) => ({
+        id:            i + 1,
+        name:          a.displayName,
+        role:          a.role?.displayName || '',
+        image:         a.fullPortrait   || a.bustPortrait || a.displayIcon || '',
+        imageFallback: a.displayIcon    || '',
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    renderSetupGrid();
+
+  } catch(e) {
+    setupGrid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--red);font-size:0.8rem;letter-spacing:1px;">
+      ไม่สามารถโหลดข้อมูลได้<br>กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต
+    </div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════
+function buildImg(agent) {
+  if (agent.image) {
+    return `<img src="${agent.image}" alt="${agent.name}" loading="lazy"
+      onerror="this.src='${agent.imageFallback}';this.onerror=null;">`;
+  }
+  return `<div class="ph-box"><span class="ph-icon">👤</span><span class="ph-name">${agent.name}</span></div>`;
+}
+
+function buildBoardImg(agent) {
+  if (agent.image) {
+    return `<img src="${agent.image}" alt="${agent.name}" loading="lazy"
+      onerror="this.src='${agent.imageFallback}';this.onerror=null;">`;
+  }
+  return `<div class="board-ph"><span class="bph-icon">👤</span><span class="bph-name">${agent.name}</span></div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  SETUP GRID
+// ═══════════════════════════════════════════════════════
+function renderSetupGrid() {
+  const grid = document.getElementById('agent-grid-setup');
+  grid.innerHTML = '';
+  AGENTS.forEach(a => {
+    const tile = document.createElement('div');
+    tile.className = 'agent-tile-setup';
+    tile.dataset.id = a.id;
+    tile.innerHTML = `
+      ${buildImg(a)}
+      <div class="agent-label">${a.name}</div>
+      <div class="sel-check">✓</div>
+    `;
+    tile.onclick = () => selectAgent(a.id);
+    grid.appendChild(tile);
+  });
+}
+
+// ── เรียก loadAgents ตอนโหลดหน้า ──
+loadAgents();
+
+function selectAgent(id) {
+  state.myAgent = AGENTS.find(a => a.id === id);
+  document.querySelectorAll('.agent-tile-setup').forEach(t => t.classList.remove('selected'));
+  document.querySelector(`.agent-tile-setup[data-id="${id}"]`)?.classList.add('selected');
+}
+
+function pickRandom() {
+  const a = AGENTS[Math.floor(Math.random() * AGENTS.length)];
+  selectAgent(a.id);
+  document.querySelector(`.agent-tile-setup[data-id="${a.id}"]`)
+    ?.scrollIntoView({ behavior:'smooth', block:'center' });
+}
+
+// ═══════════════════════════════════════════════════════
+//  START GAME
+// ═══════════════════════════════════════════════════════
+function startGame() {
+  if (!state.myAgent) { alert('กรุณาเลือกตัวละครก่อน!'); return; }
+
+  const wrap = document.getElementById('banner-img-wrap');
+  if (state.myAgent.image) {
+    wrap.innerHTML = `<img src="${state.myAgent.image}" alt="${state.myAgent.name}"
+      onerror="this.src='${state.myAgent.imageFallback}';this.onerror=null;">`;
+  } else {
+    wrap.innerHTML = `<div class="banner-ph">👤</div>`;
+  }
+  document.getElementById('banner-name').textContent = state.myAgent.name;
+  const roleEl = document.getElementById('banner-role');
+  roleEl.textContent = state.myAgent.role;
+  roleEl.style.color = ROLE_COLOR[state.myAgent.role] || 'var(--muted)';
+
+  state.eliminated = []; state.history = [];
+  bannerHidden = false;
+  document.getElementById('my-agent-banner').classList.remove('banner-hidden');
+  document.getElementById('hide-btn').textContent = 'ซ่อน';
+
+  buildBoard();
+  showScreen('game-screen');
+}
+
+// ═══════════════════════════════════════════════════════
+//  BACK BUTTON — fix #4: กลับไปหน้าเลือก แต่ keep selection
+// ═══════════════════════════════════════════════════════
+function goBack() {
+  showScreen('setup-screen');
+  // highlight previously selected agent
+  if (state.myAgent) {
+    document.querySelectorAll('.agent-tile-setup').forEach(t => t.classList.remove('selected'));
+    document.querySelector(`.agent-tile-setup[data-id="${state.myAgent.id}"]`)?.classList.add('selected');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  BOARD
+// ═══════════════════════════════════════════════════════
+function buildBoard() {
+  const grid = document.getElementById('agent-board-grid');
+  grid.innerHTML = '';
+  AGENTS.forEach(a => {
+    const tile = document.createElement('div');
+    tile.className = 'board-tile';
+    tile.dataset.id = a.id;
+    tile.innerHTML = `
+      ${buildBoardImg(a)}
+      <div class="tile-name">${a.name}</div>
+      <div class="x-overlay"><div class="x-line-1"></div><div class="x-line-2"></div></div>
+    `;
+    tile.onclick = () => toggleElim(a.id);
+    grid.appendChild(tile);
+  });
+}
+
+function toggleElim(id) {
+  const tile = document.querySelector(`#agent-board-grid .board-tile[data-id="${id}"]`);
+  if (state.eliminated.includes(id)) {
+    state.eliminated = state.eliminated.filter(e => e !== id);
+    state.history    = state.history.filter(e => e !== id);
+    tile?.classList.remove('elim');
+  } else {
+    state.eliminated.push(id);
+    state.history.push(id);
+    tile?.classList.add('elim');
+  }
+}
+
+function toggleHide() {
+  bannerHidden = !bannerHidden;
+  document.getElementById('my-agent-banner').classList.toggle('banner-hidden', bannerHidden);
+  document.getElementById('hide-btn').textContent = bannerHidden ? 'แสดง' : 'ซ่อน';
+}
+
+// ═══════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function resetGame() {
+  state = { myAgent:null, eliminated:[], history:[] };
+  document.querySelectorAll('.agent-tile-setup').forEach(t => t.classList.remove('selected'));
+  showScreen('setup-screen');
+}
+</script>
+</body>
+</html>
